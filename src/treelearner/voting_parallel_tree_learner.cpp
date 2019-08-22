@@ -1,10 +1,14 @@
-#include "parallel_tree_learner.h"
-
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #include <LightGBM/utils/common.h>
 
 #include <cstring>
 #include <tuple>
 #include <vector>
+
+#include "parallel_tree_learner.h"
 
 namespace LightGBM {
 
@@ -186,6 +190,7 @@ void VotingParallelTreeLearner<TREELEARNER_T>::GlobalVoting(int leaf_idx, const 
   // get top k
   std::vector<LightSplitInfo> top_k_splits;
   ArrayArgs<LightSplitInfo>::MaxK(feature_best_split, top_k_, &top_k_splits);
+  std::stable_sort(top_k_splits.begin(), top_k_splits.end(), std::greater<LightSplitInfo>());
   for (auto& split : top_k_splits) {
     if (split.gain == kMinScore || split.feature == -1) {
       continue;
@@ -370,7 +375,6 @@ void VotingParallelTreeLearner<TREELEARNER_T>::FindBestSplits() {
 
 template <typename TREELEARNER_T>
 void VotingParallelTreeLearner<TREELEARNER_T>::FindBestSplitsFromHistograms(const std::vector<int8_t>&, bool) {
-
   std::vector<SplitInfo> smaller_bests_per_thread(this->num_threads_);
   std::vector<SplitInfo> larger_best_per_thread(this->num_threads_);
   // find best split from local aggregated histograms
@@ -506,4 +510,4 @@ void VotingParallelTreeLearner<TREELEARNER_T>::Split(Tree* tree, int best_Leaf, 
 // instantiate template classes, otherwise linker cannot find the code
 template class VotingParallelTreeLearner<GPUTreeLearner>;
 template class VotingParallelTreeLearner<SerialTreeLearner>;
-}  // namespace FTLBoost
+}  // namespace LightGBM

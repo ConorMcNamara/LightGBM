@@ -1,23 +1,28 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_TREELEARNER_SERIAL_TREE_LEARNER_H_
 #define LIGHTGBM_TREELEARNER_SERIAL_TREE_LEARNER_H_
-#include <LightGBM/tree_learner.h>
-
-#include <LightGBM/utils/random.h>
-#include <LightGBM/utils/array_args.h>
 
 #include <LightGBM/dataset.h>
 #include <LightGBM/tree.h>
+#include <LightGBM/tree_learner.h>
+#include <LightGBM/utils/array_args.h>
+#include <LightGBM/utils/random.h>
 
-#include "feature_histogram.hpp"
-#include "split_info.hpp"
-#include "data_partition.hpp"
-#include "leaf_splits.hpp"
-
-#include <cstdio>
-#include <vector>
-#include <random>
+#include <string>
 #include <cmath>
+#include <cstdio>
 #include <memory>
+#include <random>
+#include <vector>
+
+#include "data_partition.hpp"
+#include "feature_histogram.hpp"
+#include "leaf_splits.hpp"
+#include "split_info.hpp"
+
 #ifdef USE_GPU
 // Use 4KBytes aligned allocator for ordered gradients and ordered hessians when GPU is enabled.
 // This is necessary to pin the two arrays in memory and make transferring faster.
@@ -32,7 +37,7 @@ namespace LightGBM {
 * \brief Used for learning a tree by single machine
 */
 class SerialTreeLearner: public TreeLearner {
-public:
+ public:
   explicit SerialTreeLearner(const Config* config);
 
   ~SerialTreeLearner();
@@ -69,13 +74,10 @@ public:
     }
   }
 
-  void RenewTreeOutput(Tree* tree, const ObjectiveFunction* obj, const double* prediction,
+  void RenewTreeOutput(Tree* tree, const ObjectiveFunction* obj, std::function<double(const label_t*, int)> residual_getter,
                        data_size_t total_num_data, const data_size_t* bag_indices, data_size_t bag_cnt) const override;
 
-  void RenewTreeOutput(Tree* tree, const ObjectiveFunction* obj, double prediction,
-                       data_size_t total_num_data, const data_size_t* bag_indices, data_size_t bag_cnt) const override;
-
-protected:
+ protected:
   /*!
   * \brief Some initial works before training
   */
@@ -103,9 +105,8 @@ protected:
 
   /* Force splits with forced_split_json dict and then return num splits forced.*/
   virtual int32_t ForceSplits(Tree* tree, Json& forced_split_json, int* left_leaf,
-                              int* right_leaf, int* cur_depth, 
+                              int* right_leaf, int* cur_depth,
                               bool *aborted_last_force_split);
-
 
   /*!
   * \brief Get the number of data in a leaf
@@ -113,6 +114,9 @@ protected:
   * \return The number of data in the leaf_idx leaf
   */
   inline virtual data_size_t GetGlobalDataCountInLeaf(int leaf_idx) const;
+
+  double CalculateOndemandCosts(int feature_index, int leaf_index);
+
   /*! \brief number of data */
   data_size_t num_data_;
   /*! \brief number of features */
@@ -138,6 +142,8 @@ protected:
 
   /*! \brief store best split points for all leaves */
   std::vector<SplitInfo> best_split_per_leaf_;
+  /*! \brief store best split per feature for all leaves */
+  std::vector<SplitInfo> splits_per_leaf_;
 
   /*! \brief stores best thresholds for all feature for smaller leaf */
   std::unique_ptr<LeafSplits> smaller_leaf_splits_;
@@ -170,6 +176,9 @@ protected:
   int num_threads_;
   std::vector<int> ordered_bin_indices_;
   bool is_constant_hessian_;
+
+  std::vector<bool> feature_used;
+  std::vector<uint32_t> feature_used_in_data;
 };
 
 inline data_size_t SerialTreeLearner::GetGlobalDataCountInLeaf(int leaf_idx) const {

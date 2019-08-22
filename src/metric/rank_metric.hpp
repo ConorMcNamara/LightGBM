@@ -1,19 +1,23 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_METRIC_RANK_METRIC_HPP_
 #define LIGHTGBM_METRIC_RANK_METRIC_HPP_
 
 #include <LightGBM/metric.h>
-
 #include <LightGBM/utils/common.h>
 #include <LightGBM/utils/log.h>
 #include <LightGBM/utils/openmp_wrapper.h>
 
+#include <string>
 #include <sstream>
 #include <vector>
 
 namespace LightGBM {
 
 class NDCGMetric:public Metric {
-public:
+ public:
   explicit NDCGMetric(const Config& config) {
     // get eval position
     eval_at_ = config.eval_at;
@@ -143,7 +147,7 @@ public:
     return result;
   }
 
-private:
+ private:
   /*! \brief Number of data */
   data_size_t num_data_;
   /*! \brief Pointer of label */

@@ -1,20 +1,21 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #include <LightGBM/bin.h>
 
 #include <LightGBM/utils/common.h>
 #include <LightGBM/utils/file_io.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+
 #include "dense_bin.hpp"
 #include "dense_nbits_bin.hpp"
-#include "sparse_bin.hpp"
 #include "ordered_sparse_bin.hpp"
-
-#include <cmath>
-#include <cstring>
-#include <cstdint>
-
-#include <limits>
-#include <vector>
-#include <algorithm>
+#include "sparse_bin.hpp"
 
 namespace LightGBM {
 
@@ -44,7 +45,6 @@ namespace LightGBM {
   }
 
   BinMapper::~BinMapper() {
-
   }
 
   bool NeedFilter(const std::vector<int>& cnt_in_bin, int total_cnt, int filter_cnt, BinType bin_type) {
@@ -177,11 +177,13 @@ namespace LightGBM {
       left_cnt = num_distinct_values;
     }
 
-    if (left_cnt > 0) {
+    if ((left_cnt > 0) && (max_bin > 1)) {
       int left_max_bin = static_cast<int>(static_cast<double>(left_cnt_data) / (total_sample_cnt - cnt_zero) * (max_bin - 1));
       left_max_bin = std::max(1, left_max_bin);
       bin_upper_bound = GreedyFindBin(distinct_values, counts, left_cnt, left_max_bin, left_cnt_data, min_data_in_bin);
-      bin_upper_bound.back() = -kZeroThreshold;
+      if (bin_upper_bound.size() > 0) {
+        bin_upper_bound.back() = -kZeroThreshold;
+      }
     }
 
     int right_start = -1;
@@ -192,9 +194,8 @@ namespace LightGBM {
       }
     }
 
-    if (right_start >= 0) {
-      int right_max_bin = max_bin - 1 - static_cast<int>(bin_upper_bound.size());
-      CHECK(right_max_bin > 0);
+    int right_max_bin = max_bin - 1 - static_cast<int>(bin_upper_bound.size());
+    if (right_start >= 0 && right_max_bin > 0) {
       auto right_bounds = GreedyFindBin(distinct_values + right_start, counts + right_start,
         num_distinct_values - right_start, right_max_bin, right_cnt_data, min_data_in_bin);
       bin_upper_bound.push_back(kZeroThreshold);
@@ -202,6 +203,7 @@ namespace LightGBM {
     } else {
       bin_upper_bound.push_back(std::numeric_limits<double>::infinity());
     }
+    CHECK(bin_upper_bound.size() <= static_cast<size_t>(max_bin));
     return bin_upper_bound;
   }
 
@@ -367,8 +369,6 @@ namespace LightGBM {
         // Use MissingType::None to represent this bin contains all categoricals
         if (cur_cat == distinct_values_int.size() && na_cnt == 0) {
           missing_type_ = MissingType::None;
-        } else if (na_cnt == 0) {
-          missing_type_ = MissingType::Zero;
         } else {
           missing_type_ = MissingType::NaN;
         }

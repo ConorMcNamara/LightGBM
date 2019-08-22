@@ -1,13 +1,19 @@
+/*!
+ * Copyright (c) 2017 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_OBJECTIVE_XENTROPY_OBJECTIVE_HPP_
 #define LIGHTGBM_OBJECTIVE_XENTROPY_OBJECTIVE_HPP_
 
-#include <LightGBM/objective_function.h>
 #include <LightGBM/meta.h>
-
+#include <LightGBM/objective_function.h>
 #include <LightGBM/utils/common.h>
 
-#include <cstring>
+#include <string>
+#include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <vector>
 
 /*
  * Implements gradients and hessians for the following point losses.
@@ -36,7 +42,7 @@ namespace LightGBM {
 * \brief Objective function for cross-entropy (with optional linear weights)
 */
 class CrossEntropy: public ObjectiveFunction {
-public:
+ public:
   explicit CrossEntropy(const Config&) {
   }
 
@@ -57,7 +63,7 @@ public:
     if (weights_ != nullptr) {
       label_t minw;
       double sumw;
-      Common::ObtainMinMaxSum(weights_, num_data_, &minw, (label_t*)nullptr, &sumw);
+      Common::ObtainMinMaxSum(weights_, num_data_, &minw, static_cast<label_t*>(nullptr), &sumw);
       if (minw < 0.0f) {
         Log::Fatal("[%s]: at least one weight is negative", GetName());
       }
@@ -65,7 +71,6 @@ public:
         Log::Fatal("[%s]: sum of weights is zero", GetName());
       }
     }
-
   }
 
   void GetGradients(const double* score, score_t* gradients, score_t* hessians) const override {
@@ -89,7 +94,7 @@ public:
   }
 
   const char* GetName() const override {
-    return "xentropy";
+    return "cross_entropy";
   }
 
   // convert score to a probability
@@ -108,7 +113,7 @@ public:
     double suml = 0.0f;
     double sumw = 0.0f;
     if (weights_ != nullptr) {
-      #pragma omp parallel for schedule(static) reduction(+:suml,sumw)
+      #pragma omp parallel for schedule(static) reduction(+:suml, sumw)
       for (data_size_t i = 0; i < num_data_; ++i) {
         suml += label_[i] * weights_[i];
         sumw += weights_[i];
@@ -128,7 +133,7 @@ public:
     return initscore;
   }
 
-private:
+ private:
   /*! \brief Number of data points */
   data_size_t num_data_;
   /*! \brief Pointer for label */
@@ -141,7 +146,7 @@ private:
 * \brief Objective function for alternative parameterization of cross-entropy (see top of file for explanation)
 */
 class CrossEntropyLambda: public ObjectiveFunction {
-public:
+ public:
   explicit CrossEntropyLambda(const Config&) {
     min_weight_ = max_weight_ = 0.0f;
   }
@@ -161,8 +166,7 @@ public:
     Log::Info("[%s:%s]: (objective) labels passed interval [0, 1] check",  GetName(), __func__);
 
     if (weights_ != nullptr) {
-
-      Common::ObtainMinMaxSum(weights_, num_data_, &min_weight_, &max_weight_, (label_t*)nullptr);
+      Common::ObtainMinMaxSum(weights_, num_data_, &min_weight_, &max_weight_, static_cast<label_t*>(nullptr));
       if (min_weight_ <= 0.0f) {
         Log::Fatal("[%s]: at least one weight is non-positive", GetName());
       }
@@ -196,7 +200,7 @@ public:
         const double epf = std::exp(score[i]);
         const double hhat = std::log(1.0f + epf);
         const double z = 1.0f - std::exp(-w*hhat);
-        const double enf = 1.0f / epf; // = std::exp(-score[i]);
+        const double enf = 1.0f / epf;  // = std::exp(-score[i]);
         gradients[i] = static_cast<score_t>((1.0f - y / z) * w / (1.0f + enf));
         const double c = 1.0f / (1.0f - z);
         double d = 1.0f + epf;
@@ -209,7 +213,7 @@ public:
   }
 
   const char* GetName() const override {
-    return "xentlambda";
+    return "cross_entropy_lambda";
   }
 
   //
@@ -235,7 +239,7 @@ public:
     double suml = 0.0f;
     double sumw = 0.0f;
     if (weights_ != nullptr) {
-      #pragma omp parallel for schedule(static) reduction(+:suml,sumw)
+      #pragma omp parallel for schedule(static) reduction(+:suml, sumw)
       for (data_size_t i = 0; i < num_data_; ++i) {
         suml += label_[i] * weights_[i];
         sumw += weights_[i];
@@ -253,7 +257,7 @@ public:
     return initscore;
   }
 
-private:
+ private:
   /*! \brief Number of data points */
   data_size_t num_data_;
   /*! \brief Pointer for label */

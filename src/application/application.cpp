@@ -1,29 +1,29 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #include <LightGBM/application.h>
 
-#include <LightGBM/utils/common.h>
-#include <LightGBM/utils/text_reader.h>
-
-#include <LightGBM/network.h>
+#include <LightGBM/boosting.h>
 #include <LightGBM/dataset.h>
 #include <LightGBM/dataset_loader.h>
-#include <LightGBM/boosting.h>
+#include <LightGBM/metric.h>
+#include <LightGBM/network.h>
 #include <LightGBM/objective_function.h>
 #include <LightGBM/prediction_early_stop.h>
-#include <LightGBM/metric.h>
-
-#include "predictor.hpp"
-
+#include <LightGBM/utils/common.h>
 #include <LightGBM/utils/openmp_wrapper.h>
+#include <LightGBM/utils/text_reader.h>
 
+#include <string>
+#include <chrono>
 #include <cstdio>
 #include <ctime>
-
-#include <chrono>
 #include <fstream>
 #include <sstream>
-#include <string>
 #include <utility>
-#include <vector>
+
+#include "predictor.hpp"
 
 namespace LightGBM {
 
@@ -85,7 +85,7 @@ void Application::LoadData() {
   std::unique_ptr<Predictor> predictor;
   // prediction is needed if using input initial model(continued train)
   PredictFunction predict_fun = nullptr;
-  PredictionEarlyStopInstance pred_early_stop = CreatePredictionEarlyStopInstance("none", LightGBM::PredictionEarlyStopConfig());
+  
   // need to continue training
   if (boosting_->NumberOfTotalModel() > 0 && config_.task != TaskType::KRefitTree) {
     predictor.reset(new Predictor(boosting_.get(), -1, true, false, false, false, -1, -1));
@@ -136,8 +136,7 @@ void Application::LoadData() {
         dataset_loader.LoadFromFileAlignWithOtherDataset(
           config_.valid[i].c_str(),
           config_.valid_data_initscores[i].c_str(),
-          train_data_.get())
-        );
+          train_data_.get()));
       valid_datas_.push_back(std::move(new_dataset));
       // need save binary file
       if (config_.save_binary) {
@@ -212,7 +211,6 @@ void Application::Train() {
 }
 
 void Application::Predict() {
-
   if (config_.task == TaskType::KRefitTree) {
     // create predictor
     Predictor predictor(boosting_.get(), -1, false, true, false, false, 1, 1);

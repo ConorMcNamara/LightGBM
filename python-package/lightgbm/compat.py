@@ -62,6 +62,7 @@ def json_default_with_numpy(obj):
 """pandas"""
 try:
     from pandas import Series, DataFrame
+    from pandas.api.types import is_sparse as is_dtype_sparse
     PANDAS_INSTALLED = True
 except ImportError:
     PANDAS_INSTALLED = False
@@ -76,6 +77,8 @@ except ImportError:
 
         pass
 
+    is_dtype_sparse = None
+
 """matplotlib"""
 try:
     import matplotlib
@@ -89,6 +92,23 @@ try:
     GRAPHVIZ_INSTALLED = True
 except ImportError:
     GRAPHVIZ_INSTALLED = False
+
+"""datatable"""
+try:
+    import datatable
+    if hasattr(datatable, "Frame"):
+        DataTable = datatable.Frame
+    else:
+        DataTable = datatable.DataTable
+    DATATABLE_INSTALLED = True
+except ImportError:
+    DATATABLE_INSTALLED = False
+
+    class DataTable(object):
+        """Dummy class for DataTable."""
+
+        pass
+
 
 """sklearn"""
 try:

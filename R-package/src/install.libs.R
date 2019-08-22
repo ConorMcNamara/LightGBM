@@ -44,6 +44,26 @@ if (!use_precompile) {
     cmake_cmd <- paste0(cmake_cmd, " -DUSE_R35=ON ")
   }
 
+  # Could NOT find OpenMP_C on Mojave workaround
+  # Using this kind-of complicated pattern to avoid matching to
+  # things like "pgcc"
+  using_gcc <- grepl(
+    pattern = '^gcc$|[/\\]+gcc$|^gcc\\-[0-9]+$|[/\\]+gcc\\-[0-9]+$'
+    , x = Sys.getenv('CC', '')
+  )
+  using_gpp <- grepl(
+    pattern = '^g\\+\\+$|[/\\]+g\\+\\+$|^g\\+\\+\\-[0-9]+$|[/\\]+g\\+\\+\\-[0-9]+$'
+    , x = Sys.getenv('CXX', '')
+  )
+  on_mac <- Sys.info()['sysname'] == 'Darwin'
+  if (on_mac && !(using_gcc & using_gpp)) {
+    cmake_cmd <- paste(cmake_cmd, ' -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" ')
+    cmake_cmd <- paste(cmake_cmd, ' -DOpenMP_C_LIB_NAMES="omp" ')
+    cmake_cmd <- paste(cmake_cmd, ' -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" ')
+    cmake_cmd <- paste(cmake_cmd, ' -DOpenMP_CXX_LIB_NAMES="omp" ')
+    cmake_cmd <- paste(cmake_cmd, ' -DOpenMP_omp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib" ')
+  }
+
   # Check if Windows installation (for gcc vs Visual Studio)
   if (WINDOWS) {
     if (use_mingw) {
@@ -53,9 +73,9 @@ if (!use_precompile) {
     } else {
       try_vs <- 0
       local_vs_def <- ""
-      vs_versions <- c("Visual Studio 15 2017 Win64", "Visual Studio 14 2015 Win64")
+      vs_versions <- c("Visual Studio 16 2019", "Visual Studio 15 2017", "Visual Studio 14 2015")
       for(vs in vs_versions){
-        vs_def <- paste0(" -G \"", vs, "\"")
+        vs_def <- paste0(" -G \"", vs, "\" -A x64")
         tmp_cmake_cmd <- paste0(cmake_cmd, vs_def)
         try_vs <- system(paste0(tmp_cmake_cmd, " .."))
         if (try_vs == 0) {

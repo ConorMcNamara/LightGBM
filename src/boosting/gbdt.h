@@ -1,20 +1,27 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_BOOSTING_GBDT_H_
 #define LIGHTGBM_BOOSTING_GBDT_H_
 
 #include <LightGBM/boosting.h>
 #include <LightGBM/objective_function.h>
 #include <LightGBM/prediction_early_stop.h>
-#include <LightGBM/json11.hpp>
 
-#include "score_updater.hpp"
-
-#include <cstdio>
-#include <vector>
 #include <string>
+#include <algorithm>
+#include <cstdio>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <mutex>
-#include <map>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include <LightGBM/json11.hpp>
+#include "score_updater.hpp"
 
 using namespace json11;
 
@@ -24,8 +31,7 @@ namespace LightGBM {
 * \brief GBDT algorithm implementation. including Training, prediction, bagging.
 */
 class GBDT : public GBDTBase {
-public:
-
+ public:
   /*!
   * \brief Constructor
   */
@@ -212,7 +218,7 @@ public:
         num_preb_in_one_row *= max_iteration;
       }
     } else if (is_pred_contrib) {
-      num_preb_in_one_row = num_tree_per_iteration_ * (max_feature_idx_ + 2); // +1 for 0-based indexing, +1 for baseline
+      num_preb_in_one_row = num_tree_per_iteration_ * (max_feature_idx_ + 2);  // +1 for 0-based indexing, +1 for baseline
     }
     return num_preb_in_one_row;
   }
@@ -355,8 +361,7 @@ public:
   */
   virtual const char* SubModelName() const override { return "tree"; }
 
-protected:
-
+ protected:
   /*!
   * \brief Print eval result and check early stopping
   */
@@ -381,6 +386,16 @@ protected:
   * \return count of left size
   */
   data_size_t BaggingHelper(Random& cur_rand, data_size_t start, data_size_t cnt, data_size_t* buffer);
+
+
+  /*!
+  * \brief Helper function for bagging, used for multi-threading optimization, balanced sampling
+  * \param start start indice of bagging
+  * \param cnt count
+  * \param buffer output buffer
+  * \return count of left size
+  */
+  data_size_t BalancedBaggingHelper(Random& cur_rand, data_size_t start, data_size_t cnt, data_size_t* buffer);
 
   /*!
   * \brief calculate the object function
@@ -429,6 +444,8 @@ protected:
   std::vector<std::vector<const Metric*>> valid_metrics_;
   /*! \brief Number of rounds for early stopping */
   int early_stopping_round_;
+  /*! \brief Only use first metric for early stopping */
+  bool es_first_metric_only_;
   /*! \brief Best iteration(s) for early stopping */
   std::vector<std::vector<int>> best_iter_;
   /*! \brief Best score(s) for early stopping */
@@ -485,10 +502,10 @@ protected:
   std::unique_ptr<ObjectiveFunction> loaded_objective_;
   bool average_output_;
   bool need_re_bagging_;
+  bool balanced_bagging_;
   std::string loaded_parameter_;
 
   Json forced_splits_json_;
-
 };
 
 }  // namespace LightGBM

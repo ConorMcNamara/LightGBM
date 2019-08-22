@@ -1,21 +1,25 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_BOOSTING_SCORE_UPDATER_HPP_
 #define LIGHTGBM_BOOSTING_SCORE_UPDATER_HPP_
 
-
-#include <LightGBM/utils/openmp_wrapper.h>
-#include <LightGBM/meta.h>
 #include <LightGBM/dataset.h>
+#include <LightGBM/meta.h>
 #include <LightGBM/tree.h>
 #include <LightGBM/tree_learner.h>
+#include <LightGBM/utils/openmp_wrapper.h>
 
 #include <cstring>
+#include <vector>
 
 namespace LightGBM {
 /*!
 * \brief Used to store and update score for data
 */
 class ScoreUpdater {
-public:
+ public:
   /*!
   * \brief Constructor, will pass a const pointer of dataset
   * \param data This class will bind with this data set
@@ -46,7 +50,6 @@ public:
   }
   /*! \brief Destructor */
   ~ScoreUpdater() {
-
   }
 
   inline bool has_init_score() const { return has_init_score_; }
@@ -109,7 +112,8 @@ public:
   ScoreUpdater& operator=(const ScoreUpdater&) = delete;
   /*! \brief Disable copy */
   ScoreUpdater(const ScoreUpdater&) = delete;
-private:
+
+ private:
   /*! \brief Number of total data */
   data_size_t num_data_;
   /*! \brief Pointer of data set */

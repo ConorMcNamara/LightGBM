@@ -1,9 +1,12 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #include <LightGBM/dataset.h>
-
 #include <LightGBM/utils/common.h>
 
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace LightGBM {
 
@@ -125,7 +128,6 @@ void Metadata::Init(const Metadata& fullset, const data_size_t* used_indices, da
   } else {
     num_queries_ = 0;
   }
-
 }
 
 void Metadata::PartitionLabel(const std::vector<data_size_t>& used_indices) {
@@ -516,7 +518,6 @@ void Metadata::SaveBinaryToFile(const VirtualFileWriter* writer) const {
   if (!query_boundaries_.empty()) {
     writer->Write(query_boundaries_.data(), sizeof(data_size_t) * (num_queries_ + 1));
   }
-
 }
 
 size_t Metadata::SizesInByte() const  {

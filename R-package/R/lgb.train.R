@@ -268,6 +268,17 @@ lgb.train <- function(params = list(),
 
   }
 
+  # When early stopping is not activated, we compute the best iteration / score ourselves by selecting the first metric and the first dataset
+  if (record && length(valids) > 0 && is.na(env$best_score)) {
+    if (env$eval_list[[1]]$higher_better[1] == TRUE) {
+      booster$best_iter <- unname(which.max(unlist(booster$record_evals[[2]][[1]][[1]])))
+      booster$best_score <- booster$record_evals[[2]][[1]][[1]][[booster$best_iter]]
+    } else {
+      booster$best_iter <- unname(which.min(unlist(booster$record_evals[[2]][[1]][[1]])))
+      booster$best_score <- booster$record_evals[[2]][[1]][[1]][[booster$best_iter]]
+    }
+  }
+
   # Check for booster model conversion to predictor model
   if (reset_data) {
 

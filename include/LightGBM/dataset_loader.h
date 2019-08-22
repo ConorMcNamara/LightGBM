@@ -1,13 +1,20 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_DATASET_LOADER_H_
 #define LIGHTGBM_DATASET_LOADER_H_
 
 #include <LightGBM/dataset.h>
 
+#include <string>
+#include <unordered_set>
+#include <vector>
+
 namespace LightGBM {
 
 class DatasetLoader {
-public:
-
+ public:
   LIGHTGBM_EXPORT DatasetLoader(const Config& io_config, const PredictFunction& predict_fun, int num_class, const char* filename);
 
   LIGHTGBM_EXPORT ~DatasetLoader();
@@ -29,8 +36,7 @@ public:
   /*! \brief Disable copy */
   DatasetLoader(const DatasetLoader&) = delete;
 
-private:
-
+ private:
   Dataset* LoadFromBinFile(const char* data_filename, const char* bin_filename, int rank, int num_machines, int* num_global_data, std::vector<data_size_t>* used_data_indices);
 
   void SetHeader(const char* filename);
@@ -75,6 +81,6 @@ private:
   std::unordered_set<int> categorical_features_;
 };
 
-}
+}  // namespace LightGBM
 
-#endif // LIGHTGBM_DATASET_LOADER_H_
+#endif  // LIGHTGBM_DATASET_LOADER_H_

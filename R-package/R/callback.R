@@ -10,7 +10,7 @@ CB_ENV <- R6::R6Class(
     eval_list = list(),
     eval_err_list = list(),
     best_iter = -1,
-    best_score = -1,
+    best_score = NA,
     met_early_stop = FALSE
   )
 )
@@ -323,43 +323,44 @@ cb.early.stop <- function(stopping_rounds, verbose = TRUE) {
       # Store score
       score <- env$eval_list[[i]]$value * factor_to_bigger_better[i]
 
-      # Check if score is better
-      if (score > best_score[i]) {
+        # Check if score is better
+        if (score > best_score[i]) {
 
-        # Store new scores
-        best_score[i] <<- score
-        best_iter[i] <<- cur_iter
+          # Store new scores
+          best_score[i] <<- score
+          best_iter[i] <<- cur_iter
 
-        # Prepare to print if verbose
-        if (verbose) {
-          best_msg[[i]] <<- as.character(merge.eval.string(env))
-        }
-
-      } else {
-
-        # Check if early stopping is required
-        if (cur_iter - best_iter[i] >= stopping_rounds) {
-
-          # Check if model is not null
-          if (!is.null(env$model)) {
-            env$model$best_score <- best_score[i]
-            env$model$best_iter <- best_iter[i]
+          # Prepare to print if verbose
+          if (verbose) {
+            best_msg[[i]] <<- as.character(merge.eval.string(env))
           }
 
-          # Print message if verbose
-          if (isTRUE(verbose)) {
+        } else {
 
-            cat("Early stopping, best iteration is:", "\n")
-            cat(best_msg[[i]], "\n")
+          # Check if early stopping is required
+          if (cur_iter - best_iter[i] >= stopping_rounds) {
 
+            # Check if model is not null
+            if (!is.null(env$model)) {
+              env$model$best_score <- best_score[i]
+              env$model$best_iter <- best_iter[i]
+            }
+
+            # Print message if verbose
+            if (isTRUE(verbose)) {
+
+              cat("Early stopping, best iteration is:", "\n")
+              cat(best_msg[[i]], "\n")
+
+            }
+
+            # Store best iteration and stop
+            env$best_iter <- best_iter[i]
+            env$met_early_stop <- TRUE
           }
 
-          # Store best iteration and stop
-          env$best_iter <- best_iter[i]
-          env$met_early_stop <- TRUE
         }
 
-      }
       if (!isTRUE(env$met_early_stop) && cur_iter == env$end_iteration) {
         # Check if model is not null
         if (!is.null(env$model)) {
@@ -421,13 +422,13 @@ categorize.callbacks <- function(cb_list) {
   # Check for pre-iteration or post-iteration
   list(
     pre_iter = Filter(function(x) {
-        pre <- attr(x, "is_pre_iteration")
-        !is.null(pre) && pre
-      }, cb_list),
+      pre <- attr(x, "is_pre_iteration")
+      !is.null(pre) && pre
+    }, cb_list),
     post_iter = Filter(function(x) {
-        pre <- attr(x, "is_pre_iteration")
-        is.null(pre) || !pre
-      }, cb_list)
+      pre <- attr(x, "is_pre_iteration")
+      is.null(pre) || !pre
+    }, cb_list)
   )
 
 }

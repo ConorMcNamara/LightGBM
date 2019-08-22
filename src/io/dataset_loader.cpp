@@ -1,11 +1,13 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #include <LightGBM/dataset_loader.h>
 
-#include <LightGBM/utils/openmp_wrapper.h>
-#include <LightGBM/utils/log.h>
-#include <LightGBM/utils/array_args.h>
-
 #include <LightGBM/network.h>
-
+#include <LightGBM/utils/array_args.h>
+#include <LightGBM/utils/log.h>
+#include <LightGBM/utils/openmp_wrapper.h>
 
 namespace LightGBM {
 
@@ -18,7 +20,6 @@ DatasetLoader::DatasetLoader(const Config& io_config, const PredictFunction& pre
 }
 
 DatasetLoader::~DatasetLoader() {
-
 }
 
 void DatasetLoader::SetHeader(const char* filename) {
@@ -316,6 +317,18 @@ Dataset* DatasetLoader::LoadFromBinFile(const char* data_filename, const char* b
   mem_ptr += sizeof(dataset->num_total_features_);
   dataset->label_idx_ = *(reinterpret_cast<const int*>(mem_ptr));
   mem_ptr += sizeof(dataset->label_idx_);
+  dataset->max_bin_ = *(reinterpret_cast<const int*>(mem_ptr));
+  mem_ptr += sizeof(dataset->max_bin_);
+  dataset->bin_construct_sample_cnt_ = *(reinterpret_cast<const int*>(mem_ptr));
+  mem_ptr += sizeof(dataset->bin_construct_sample_cnt_);
+  dataset->min_data_in_bin_ = *(reinterpret_cast<const int*>(mem_ptr));
+  mem_ptr += sizeof(dataset->min_data_in_bin_);
+  dataset->use_missing_ = *(reinterpret_cast<const bool*>(mem_ptr));
+  mem_ptr += sizeof(dataset->use_missing_);
+  dataset->zero_as_missing_ = *(reinterpret_cast<const bool*>(mem_ptr));
+  mem_ptr += sizeof(dataset->zero_as_missing_);
+  dataset->sparse_threshold_ = *(reinterpret_cast<const double*>(mem_ptr));
+  mem_ptr += sizeof(dataset->sparse_threshold_);
   const int* tmp_feature_map = reinterpret_cast<const int*>(mem_ptr);
   dataset->used_feature_map_.clear();
   for (int i = 0; i < dataset->num_total_features_; ++i) {
@@ -370,17 +383,16 @@ Dataset* DatasetLoader::LoadFromBinFile(const char* data_filename, const char* b
   }
   mem_ptr += sizeof(int) * (dataset->num_groups_);
 
-  if(!config_.monotone_constraints.empty()) {
+  if (!config_.monotone_constraints.empty()) {
     CHECK(static_cast<size_t>(dataset->num_total_features_) == config_.monotone_constraints.size());
     dataset->monotone_types_.resize(dataset->num_features_);
-    for(int i = 0; i < dataset->num_total_features_; ++i){
+    for (int i = 0; i < dataset->num_total_features_; ++i) {
       int inner_fidx = dataset->InnerFeatureIndex(i);
-      if(inner_fidx >= 0) {
+      if (inner_fidx >= 0) {
         dataset->monotone_types_[inner_fidx] = config_.monotone_constraints[i];
       }
     }
-  }
-  else {
+  } else {
     const int8_t* tmp_ptr_monotone_type = reinterpret_cast<const int8_t*>(mem_ptr);
     dataset->monotone_types_.clear();
     for (int i = 0; i < dataset->num_features_; ++i) {
@@ -393,17 +405,16 @@ Dataset* DatasetLoader::LoadFromBinFile(const char* data_filename, const char* b
     dataset->monotone_types_.clear();
   }
 
-  if(!config_.feature_contri.empty()) {
+  if (!config_.feature_contri.empty()) {
     CHECK(static_cast<size_t>(dataset->num_total_features_) == config_.feature_contri.size());
     dataset->feature_penalty_.resize(dataset->num_features_);
-    for(int i = 0; i < dataset->num_total_features_; ++i){
+    for (int i = 0; i < dataset->num_total_features_; ++i) {
       int inner_fidx = dataset->InnerFeatureIndex(i);
-      if(inner_fidx >= 0) {
+      if (inner_fidx >= 0) {
         dataset->feature_penalty_[inner_fidx] = config_.feature_contri[i];
       }
     }
-  }
-  else {
+  } else {
     const double* tmp_ptr_feature_penalty = reinterpret_cast<const double*>(mem_ptr);
     dataset->feature_penalty_.clear();
     for (int i = 0; i < dataset->num_features_; ++i) {
@@ -414,6 +425,23 @@ Dataset* DatasetLoader::LoadFromBinFile(const char* data_filename, const char* b
 
   if (ArrayArgs<double>::CheckAll(dataset->feature_penalty_, 1)) {
     dataset->feature_penalty_.clear();
+  }
+
+  if (!config_.max_bin_by_feature.empty()) {
+    CHECK(static_cast<size_t>(dataset->num_total_features_) == config_.max_bin_by_feature.size());
+    CHECK(*(std::min_element(config_.max_bin_by_feature.begin(), config_.max_bin_by_feature.end())) > 1);
+    dataset->max_bin_by_feature_.resize(dataset->num_total_features_);
+    dataset->max_bin_by_feature_.assign(config_.max_bin_by_feature.begin(), config_.max_bin_by_feature.end());
+  } else {
+    const int32_t* tmp_ptr_max_bin_by_feature = reinterpret_cast<const int32_t*>(mem_ptr);
+    dataset->max_bin_by_feature_.clear();
+    for (int i = 0; i < dataset->num_total_features_; ++i) {
+      dataset->max_bin_by_feature_.push_back(tmp_ptr_max_bin_by_feature[i]);
+    }
+  }
+  mem_ptr += sizeof(int32_t) * (dataset->num_total_features_);
+  if (ArrayArgs<int32_t>::CheckAll(dataset->max_bin_by_feature_, -1)) {
+    dataset->max_bin_by_feature_.clear();
   }
 
   // get feature names
@@ -514,8 +542,7 @@ Dataset* DatasetLoader::LoadFromBinFile(const char* data_filename, const char* b
     dataset->feature_groups_.emplace_back(std::unique_ptr<FeatureGroup>(
       new FeatureGroup(buffer.data(),
                        *num_global_data,
-                       *used_data_indices)
-      ));
+                       *used_data_indices)));
   }
   dataset->feature_groups_.shrink_to_fit();
   dataset->is_finish_load_ = true;
@@ -534,7 +561,10 @@ Dataset* DatasetLoader::CostructFromSampleData(double** sample_values,
       feature_names_.push_back(str_buf.str());
     }
   }
-
+  if (!config_.max_bin_by_feature.empty()) {
+    CHECK(static_cast<size_t>(num_col) == config_.max_bin_by_feature.size());
+    CHECK(*(std::min_element(config_.max_bin_by_feature.begin(), config_.max_bin_by_feature.end())) > 1);
+  }
   const data_size_t filter_cnt = static_cast<data_size_t>(
     static_cast<double>(config_.min_data_in_leaf * total_sample_size) / num_data);
   if (Network::num_machines() == 1) {
@@ -552,8 +582,16 @@ Dataset* DatasetLoader::CostructFromSampleData(double** sample_values,
         bin_type = BinType::CategoricalBin;
       }
       bin_mappers[i].reset(new BinMapper());
-      bin_mappers[i]->FindBin(sample_values[i], num_per_col[i], total_sample_size,
-                              config_.max_bin, config_.min_data_in_bin, filter_cnt, bin_type, config_.use_missing, config_.zero_as_missing);
+      if (config_.max_bin_by_feature.empty()) {
+        bin_mappers[i]->FindBin(sample_values[i], num_per_col[i], total_sample_size,
+                                config_.max_bin, config_.min_data_in_bin, filter_cnt,
+                                bin_type, config_.use_missing, config_.zero_as_missing);
+      } else {
+        bin_mappers[i]->FindBin(sample_values[i], num_per_col[i], total_sample_size,
+                                config_.max_bin_by_feature[i], config_.min_data_in_bin,
+                                filter_cnt, bin_type, config_.use_missing,
+                                config_.zero_as_missing);
+      }
       OMP_LOOP_EX_END();
     }
     OMP_THROW_EX();
@@ -589,8 +627,16 @@ Dataset* DatasetLoader::CostructFromSampleData(double** sample_values,
         bin_type = BinType::CategoricalBin;
       }
       bin_mappers[i].reset(new BinMapper());
-      bin_mappers[i]->FindBin(sample_values[start[rank] + i], num_per_col[start[rank] + i], total_sample_size,
-                              config_.max_bin, config_.min_data_in_bin, filter_cnt, bin_type, config_.use_missing, config_.zero_as_missing);
+      if (config_.max_bin_by_feature.empty()) {
+        bin_mappers[i]->FindBin(sample_values[start[rank] + i], num_per_col[start[rank] + i],
+                                total_sample_size, config_.max_bin, config_.min_data_in_bin,
+                                filter_cnt, bin_type, config_.use_missing, config_.zero_as_missing);
+      } else {
+        bin_mappers[i]->FindBin(sample_values[start[rank] + i], num_per_col[start[rank] + i],
+                                total_sample_size, config_.max_bin_by_feature[start[rank] + i],
+                                config_.min_data_in_bin, filter_cnt, bin_type, config_.use_missing,
+                                config_.zero_as_missing);
+      }
       OMP_LOOP_EX_END();
     }
     OMP_THROW_EX();
@@ -605,6 +651,7 @@ Dataset* DatasetLoader::CostructFromSampleData(double** sample_values,
     int type_size = BinMapper::SizeForSpecificBin(max_bin);
     // since sizes of different feature may not be same, we expand all bin mapper to type_size
     comm_size_t buffer_size = type_size * total_num_feature;
+    CHECK(buffer_size >= 0);
     auto input_buffer = std::vector<char>(buffer_size);
     auto output_buffer = std::vector<char>(buffer_size);
 
@@ -770,8 +817,8 @@ std::vector<std::string> DatasetLoader::SampleTextDataFromFile(const char* filen
         [this, rank, num_machines, &qid, &query_boundaries, &is_query_used, num_queries]
       (data_size_t line_idx) {
         if (qid >= num_queries) {
-          Log::Fatal("Query id exceeds the range of the query file, \
-                      please ensure the query file is correct");
+          Log::Fatal("Query id exceeds the range of the query file, "
+                     "please ensure the query file is correct");
         }
         if (line_idx >= query_boundaries[qid + 1]) {
           // if is new query
@@ -789,7 +836,6 @@ std::vector<std::string> DatasetLoader::SampleTextDataFromFile(const char* filen
 }
 
 void DatasetLoader::ConstructBinMappersFromTextData(int rank, int num_machines, const std::vector<std::string>& sample_data, const Parser* parser, Dataset* dataset) {
-
   std::vector<std::vector<double>> sample_values;
   std::vector<std::vector<int>> sample_indices;
   std::vector<std::pair<int, double>> oneline_features;
@@ -819,6 +865,11 @@ void DatasetLoader::ConstructBinMappersFromTextData(int rank, int num_machines, 
   } else {
     dataset->used_feature_map_ = std::vector<int>(feature_names_.size(), -1);
     dataset->num_total_features_ = static_cast<int>(feature_names_.size());
+  }
+
+  if (!config_.max_bin_by_feature.empty()) {
+    CHECK(static_cast<size_t>(dataset->num_total_features_) == config_.max_bin_by_feature.size());
+    CHECK(*(std::min_element(config_.max_bin_by_feature.begin(), config_.max_bin_by_feature.end())) > 1);
   }
 
   // check the range of label_idx, weight_idx and group_idx
@@ -855,8 +906,16 @@ void DatasetLoader::ConstructBinMappersFromTextData(int rank, int num_machines, 
         bin_type = BinType::CategoricalBin;
       }
       bin_mappers[i].reset(new BinMapper());
-      bin_mappers[i]->FindBin(sample_values[i].data(), static_cast<int>(sample_values[i].size()),
-                              sample_data.size(), config_.max_bin, config_.min_data_in_bin, filter_cnt, bin_type, config_.use_missing, config_.zero_as_missing);
+      if (config_.max_bin_by_feature.empty()) {
+        bin_mappers[i]->FindBin(sample_values[i].data(), static_cast<int>(sample_values[i].size()),
+                                sample_data.size(), config_.max_bin, config_.min_data_in_bin,
+                                filter_cnt, bin_type, config_.use_missing, config_.zero_as_missing);
+      } else {
+        bin_mappers[i]->FindBin(sample_values[i].data(), static_cast<int>(sample_values[i].size()),
+                                sample_data.size(), config_.max_bin_by_feature[i],
+                                config_.min_data_in_bin, filter_cnt, bin_type, config_.use_missing,
+                                config_.zero_as_missing);
+      }
       OMP_LOOP_EX_END();
     }
     OMP_THROW_EX();
@@ -892,8 +951,18 @@ void DatasetLoader::ConstructBinMappersFromTextData(int rank, int num_machines, 
         bin_type = BinType::CategoricalBin;
       }
       bin_mappers[i].reset(new BinMapper());
-      bin_mappers[i]->FindBin(sample_values[start[rank] + i].data(), static_cast<int>(sample_values[start[rank] + i].size()),
-                              sample_data.size(), config_.max_bin, config_.min_data_in_bin, filter_cnt, bin_type, config_.use_missing, config_.zero_as_missing);
+      if (config_.max_bin_by_feature.empty()) {
+        bin_mappers[i]->FindBin(sample_values[start[rank] + i].data(),
+                                static_cast<int>(sample_values[start[rank] + i].size()),
+                                sample_data.size(), config_.max_bin, config_.min_data_in_bin,
+                                filter_cnt, bin_type, config_.use_missing, config_.zero_as_missing);
+      } else {
+        bin_mappers[i]->FindBin(sample_values[start[rank] + i].data(),
+                                static_cast<int>(sample_values[start[rank] + i].size()),
+                                sample_data.size(), config_.max_bin_by_feature[i],
+                                config_.min_data_in_bin, filter_cnt, bin_type,
+                                config_.use_missing, config_.zero_as_missing);
+      }
       OMP_LOOP_EX_END();
     }
     OMP_THROW_EX();
@@ -908,6 +977,7 @@ void DatasetLoader::ConstructBinMappersFromTextData(int rank, int num_machines, 
     int type_size = BinMapper::SizeForSpecificBin(max_bin);
     // since sizes of different feature may not be same, we expand all bin mapper to type_size
     comm_size_t buffer_size = type_size * num_total_features;
+    CHECK(buffer_size >= 0);
     auto input_buffer = std::vector<char>(buffer_size);
     auto output_buffer = std::vector<char>(buffer_size);
 
@@ -1131,7 +1201,6 @@ std::string DatasetLoader::CheckCanLoadFromBin(const char* filename) {
   } else {
     return std::string();
   }
-
 }
 
-}
+}  // namespace LightGBM

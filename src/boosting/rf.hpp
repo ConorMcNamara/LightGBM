@@ -1,23 +1,29 @@
+/*!
+ * Copyright (c) 2017 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_BOOSTING_RF_H_
 #define LIGHTGBM_BOOSTING_RF_H_
 
 #include <LightGBM/boosting.h>
 #include <LightGBM/metric.h>
-#include "score_updater.hpp"
-#include "gbdt.h"
 
-#include <cstdio>
-#include <vector>
 #include <string>
+#include <cstdio>
 #include <fstream>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "gbdt.h"
+#include "score_updater.hpp"
 
 namespace LightGBM {
 /*!
 * \brief Rondom Forest implementation
 */
 class RF : public GBDT {
-public:
-
+ public:
   RF() : GBDT() {
     average_output_ = true;
   }
@@ -106,7 +112,6 @@ public:
       std::unique_ptr<Tree> new_tree(new Tree(2));
       size_t bias = static_cast<size_t>(cur_tree_id)* num_data_;
       if (class_need_train_[cur_tree_id]) {
-
         auto grad = gradients + bias;
         auto hess = hessians + bias;
 
@@ -125,7 +130,9 @@ public:
       }
 
       if (new_tree->num_leaves() > 1) {
-        tree_learner_->RenewTreeOutput(new_tree.get(), objective_function_, init_scores_[cur_tree_id],
+        double pred = init_scores_[cur_tree_id];
+        auto residual_getter = [pred](const label_t* label, int i) {return static_cast<double>(label[i]) - pred; };
+        tree_learner_->RenewTreeOutput(new_tree.get(), objective_function_, residual_getter,
           num_data_, bag_data_indices_.data(), bag_data_cnt_);
         if (std::fabs(init_scores_[cur_tree_id]) > kEpsilon) {
           new_tree->AddBias(init_scores_[cur_tree_id]);
@@ -201,13 +208,11 @@ public:
     return true;
   };
 
-private:
-
+ private:
   std::vector<score_t> tmp_grad_;
   std::vector<score_t> tmp_hess_;
   std::vector<double> init_scores_;
-
 };
 
 }  // namespace LightGBM
-#endif   // LIGHTGBM_BOOSTING_RF_H_
+#endif  // LIGHTGBM_BOOSTING_RF_H_

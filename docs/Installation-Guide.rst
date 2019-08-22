@@ -3,29 +3,18 @@ Installation Guide
 
 Here is the guide for the build of LightGBM CLI version.
 
+All instructions below are aimed to compile 64-bit version of LightGBM.
+It is worth to compile 32-bit version only in very rare special cases of environmental limitations.
+32-bit version is slow and untested, so use it on your own risk and don't forget to adjust some commands in this guide.
+
 For the build of Python-package and R-package, please refer to `Python-package`_ and `R-package`_ folders respectively.
 
 Also you can download artifacts of the latest successful build in master branch: |download artifacts|.
 
-**Contents**
-
--  `Windows <#windows>`__
-
--  `Linux <#linux>`__
-
--  `macOS <#macos>`__
-
--  `Docker <#docker>`__
-
-- `Threadless Version (not Recommended) <#build-threadless-version-not-recommended>`__
-
--  `MPI Version <#build-mpi-version>`__
-
--  `GPU Version <#build-gpu-version>`__
-
--  `HDFS Version <#build-hdfs-version>`__
-
--  `Java Wrapper <#build-java-wrapper>`__
+.. contents:: **Contents**
+    :depth: 1
+    :local:
+    :backlinks: none
 
 Windows
 ~~~~~~~
@@ -54,7 +43,7 @@ With GUI
 
    If you have errors about **Platform Toolset**, go to ``PROJECT`` -> ``Properties`` -> ``Configuration Properties`` -> ``General`` and select the toolset installed on your machine.
 
-The exe file will be in ``LightGBM-master/windows/x64/Release`` folder.
+The ``.exe`` file will be in ``LightGBM-master/windows/x64/Release`` folder.
 
 From Command Line
 *****************
@@ -65,14 +54,14 @@ From Command Line
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM
      cd LightGBM
      mkdir build
      cd build
-     cmake -DCMAKE_GENERATOR_PLATFORM=x64 ..
+     cmake -A x64 ..
      cmake --build . --target ALL_BUILD --config Release
 
-The exe and dll files will be in ``LightGBM/Release`` folder.
+The ``.exe`` and ``.dll`` files will be in ``LightGBM/Release`` folder.
 
 MinGW-w64
 ^^^^^^^^^
@@ -83,18 +72,19 @@ MinGW-w64
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM
      cd LightGBM
      mkdir build
      cd build
      cmake -G "MinGW Makefiles" ..
      mingw32-make.exe -j4
 
-The exe and dll files will be in ``LightGBM/`` folder.
+The ``.exe`` and ``.dll`` files will be in ``LightGBM/`` folder.
 
 **Note**: You may need to run the ``cmake -G "MinGW Makefiles" ..`` one more time if you encounter the ``sh.exe was found in your PATH`` error.
 
-It is recommended to use **Visual Studio** for its better multithreading efficiency in **Windows** for many-core systems (see `FAQ <./FAQ.rst#lightgbm>`__ Question 4 and Question 8).
+It is recommended to use **Visual Studio** for its better multithreading efficiency in **Windows** for many-core systems
+(see `Question 4 <./FAQ.rst#i-am-using-windows-should-i-use-visual-studio-or-mingw-for-compiling-lightgbm>`__ and `Question 8 <./FAQ.rst#cpu-usage-is-low-like-10-in-windows-when-using-lightgbm-on-very-large-datasets-with-many-core-systems>`__).
 
 Also, you may want to read `gcc Tips <./gcc-Tips.rst>`__.
 
@@ -109,7 +99,7 @@ On Linux LightGBM can be built using **CMake** and **gcc** or **Clang**.
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      mkdir build ; cd build
      cmake ..
      make -j4
@@ -144,9 +134,21 @@ Only **Apple Clang** version 8.1 or higher is supported.
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      mkdir build ; cd build
+
+     # For Mojave (10.14)
+     cmake \
+       -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" \
+       -DOpenMP_C_LIB_NAMES="omp" \
+       -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" \
+       -DOpenMP_CXX_LIB_NAMES="omp" \
+       -DOpenMP_omp_LIBRARY=$(brew --prefix libomp)/lib/libomp.dylib \
+       ..
+
+     # For High Sierra or earlier (<= 10.13)
      cmake ..
+
      make -j4
 
 gcc
@@ -168,7 +170,7 @@ gcc
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      export CXX=g++-7 CC=gcc-7  # replace "7" with version of gcc installed on your machine
      mkdir build ; cd build
      cmake ..
@@ -179,7 +181,7 @@ Also, you may want to read `gcc Tips <./gcc-Tips.rst>`__.
 Docker
 ~~~~~~
 
-Refer to `Docker folder <https://github.com/Microsoft/LightGBM/tree/master/docker>`__.
+Refer to `Docker folder <https://github.com/microsoft/LightGBM/tree/master/docker>`__.
 
 Build Threadless Version (not Recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -218,7 +220,7 @@ With GUI
 
    If you have errors about **Platform Toolset**, go to ``PROJECT`` -> ``Properties`` -> ``Configuration Properties`` -> ``General`` and select the toolset installed on your machine.
 
-The exe file will be in ``LightGBM-master/windows/x64/Release`` folder.
+The ``.exe`` file will be in ``LightGBM-master/windows/x64/Release`` folder.
 
 From Command Line
 -----------------
@@ -229,14 +231,14 @@ From Command Line
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM
      cd LightGBM
      mkdir build
      cd build
-     cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DUSE_OPENMP=OFF ..
+     cmake -A x64 -DUSE_OPENMP=OFF ..
      cmake --build . --target ALL_BUILD --config Release
 
-The exe and dll files will be in ``LightGBM/Release`` folder.
+The ``.exe`` and ``.dll`` files will be in ``LightGBM/Release`` folder.
 
 MinGW-w64
 *********
@@ -247,14 +249,14 @@ MinGW-w64
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM
      cd LightGBM
      mkdir build
      cd build
      cmake -G "MinGW Makefiles" -DUSE_OPENMP=OFF ..
      mingw32-make.exe -j4
 
-The exe and dll files will be in ``LightGBM/`` folder.
+The ``.exe`` and ``.dll`` files will be in ``LightGBM/`` folder.
 
 **Note**: You may need to run the ``cmake -G "MinGW Makefiles" -DUSE_OPENMP=OFF ..`` one more time if you encounter the ``sh.exe was found in your PATH`` error.
 
@@ -269,7 +271,7 @@ On Linux version of LightGBM without OpenMP support can be built using **CMake**
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      mkdir build ; cd build
      cmake -DUSE_OPENMP=OFF ..
      make -j4
@@ -296,7 +298,7 @@ Only **Apple Clang** version 8.1 or higher is supported.
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      mkdir build ; cd build
      cmake -DUSE_OPENMP=OFF ..
      make -j4
@@ -320,7 +322,7 @@ gcc
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      export CXX=g++-7 CC=gcc-7  # replace "7" with version of gcc installed on your machine
      mkdir build ; cd build
      cmake -DUSE_OPENMP=OFF ..
@@ -358,7 +360,7 @@ With GUI
 
    If you have errors about **Platform Toolset**, go to ``PROJECT`` -> ``Properties`` -> ``Configuration Properties`` -> ``General`` and select the toolset installed on your machine.
 
-The exe file will be in ``LightGBM-master/windows/x64/Release_mpi`` folder.
+The ``.exe`` file will be in ``LightGBM-master/windows/x64/Release_mpi`` folder.
 
 From Command Line
 *****************
@@ -371,14 +373,14 @@ From Command Line
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM
      cd LightGBM
      mkdir build
      cd build
-     cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DUSE_MPI=ON ..
+     cmake -A x64 -DUSE_MPI=ON ..
      cmake --build . --target ALL_BUILD --config Release
 
-The exe and dll files will be in ``LightGBM/Release`` folder.
+The ``.exe`` and ``.dll`` files will be in ``LightGBM/Release`` folder.
 
 **Note**: Building MPI version by **MinGW** is not supported due to the miss of MPI library in it.
 
@@ -395,7 +397,7 @@ On Linux MPI version of LightGBM can be built using **Open MPI**, **CMake** and 
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      mkdir build ; cd build
      cmake -DUSE_MPI=ON ..
      make -j4
@@ -434,9 +436,22 @@ Only **Apple Clang** version 8.1 or higher is supported.
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      mkdir build ; cd build
+
+     # For Mojave (10.14)
+     cmake \
+       -DUSE_MPI=ON \
+       -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" \
+       -DOpenMP_C_LIB_NAMES="omp" \
+       -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" \
+       -DOpenMP_CXX_LIB_NAMES="omp" \
+       -DOpenMP_omp_LIBRARY=$(brew --prefix libomp)/lib/libomp.dylib \
+       ..
+
+     # For High Sierra or earlier (<= 10.13)
      cmake -DUSE_MPI=ON ..
+
      make -j4
 
 gcc
@@ -464,7 +479,7 @@ gcc
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      export CXX=g++-7 CC=gcc-7  # replace "7" with version of gcc installed on your machine
      mkdir build ; cd build
      cmake -DUSE_MPI=ON ..
@@ -482,7 +497,7 @@ The following dependencies should be installed before compilation:
 
 -  **OpenCL** 1.2 headers and libraries, which is usually provided by GPU manufacture.
 
-   The generic OpenCL ICD packages (for example, Debian package ``cl-icd-libopencl1`` and ``cl-icd-opencl-dev``) can also be used.
+   The generic OpenCL ICD packages (for example, Debian package ``ocl-icd-libopencl1`` and ``ocl-icd-opencl-dev``) can also be used.
 
 -  **libboost** 1.56 or later (1.61 or later is recommended).
 
@@ -496,7 +511,7 @@ To build LightGBM GPU version, run the following commands:
 
 .. code::
 
-  git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+  git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
   mkdir build ; cd build
   cmake -DUSE_GPU=1 ..
   # if you have installed NVIDIA CUDA to a customized location, you should specify paths to OpenCL headers and library like the following:
@@ -530,37 +545,39 @@ Following procedure is for the **MSVC** (Microsoft Visual C++) build.
    
    Visual Studio 2015 -> ``msvc-14.0-64.exe``,
 
-   Visual Studio 2017 -> ``msvc-14.1-64.exe``.
+   Visual Studio 2017 -> ``msvc-14.1-64.exe``,
+
+   Visual Studio 2019 -> ``msvc-14.2-64.exe``.
 
 4. Run the following commands:
 
    .. code::
 
-     Set BOOST_ROOT=C:\local\boost_1_63_0\
-     Set BOOST_LIBRARYDIR=C:\local\boost_1_63_0\lib64-msvc-14.0
-     git clone --recursive https://github.com/Microsoft/LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM
      cd LightGBM
      mkdir build
      cd build
-     cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DUSE_GPU=1 ..
+     cmake -A x64 -DUSE_GPU=1 -DBOOST_ROOT=C:/local/boost_1_63_0 -DBOOST_LIBRARYDIR=C:/local/boost_1_63_0/lib64-msvc-14.0 ..
+     # if you have installed NVIDIA CUDA to a customized location, you should specify paths to OpenCL headers and library like the following:
+     # cmake -A x64 -DUSE_GPU=1 -DBOOST_ROOT=C:/local/boost_1_63_0 -DBOOST_LIBRARYDIR=C:/local/boost_1_63_0/lib64-msvc-14.0 -DOpenCL_LIBRARY="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.0/lib/x64/OpenCL.lib" -DOpenCL_INCLUDE_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.0/include" ..
      cmake --build . --target ALL_BUILD --config Release
 
-   **Note**: ``C:\local\boost_1_63_0\`` and ``C:\local\boost_1_63_0\lib64-msvc-14.0`` are locations of your **Boost** binaries (assuming you've downloaded 1.63.0 version). You also can set them to the environment variable to avoid ``Set ...`` commands when build.
+   **Note**: ``C:/local/boost_1_63_0`` and ``C:/local/boost_1_63_0/lib64-msvc-14.0`` are locations of your **Boost** binaries (assuming you've downloaded 1.63.0 version for Visual Studio 2015).
 
 Docker
 ^^^^^^
 
-Refer to `GPU Docker folder <https://github.com/Microsoft/LightGBM/tree/master/docker/gpu>`__.
+Refer to `GPU Docker folder <https://github.com/microsoft/LightGBM/tree/master/docker/gpu>`__.
 
 Build HDFS Version
 ~~~~~~~~~~~~~~~~~~
 
-**Note**: Installation process of HDFS version is untested.
+HDFS version of LightGBM was tested on CDH-5.14.4 cluster.
 
 Linux
 ^^^^^
 
-On Linux HDFS version of LightGBM can be built using **CMake** and **gcc** or **Clang**.
+On Linux HDFS version of LightGBM can be built using **CMake** and **gcc**.
 
 1. Install `CMake`_.
 
@@ -568,9 +585,15 @@ On Linux HDFS version of LightGBM can be built using **CMake** and **gcc** or **
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      mkdir build ; cd build
      cmake -DUSE_HDFS=ON ..
+     # if you have installed HDFS to a customized location, you should specify paths to HDFS headers (hdfs.h) and library (libhdfs.so) like the following:
+     # cmake \
+     #   -DUSE_HDFS=ON \
+     #   -DHDFS_LIB="/opt/cloudera/parcels/CDH-5.14.4-1.cdh5.14.4.p0.3/lib64/libhdfs.so" \
+     #   -DHDFS_INCLUDE_DIR="/opt/cloudera/parcels/CDH-5.14.4-1.cdh5.14.4.p0.3/include/" \
+     #   ..
      make -j4
 
 Build Java Wrapper
@@ -594,14 +617,14 @@ VS Build Tools
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM
      cd LightGBM
      mkdir build
      cd build
-     cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DUSE_SWIG=ON ..
+     cmake -A x64 -DUSE_SWIG=ON ..
      cmake --build . --target ALL_BUILD --config Release
 
-The jar file will be in ``LightGBM/build`` folder and the dll files will be in ``LightGBM/Release`` folder.
+The ``.jar`` file will be in ``LightGBM/build`` folder and the ``.dll`` files will be in ``LightGBM/Release`` folder.
 
 MinGW-w64
 *********
@@ -614,18 +637,20 @@ MinGW-w64
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM
      cd LightGBM
      mkdir build
      cd build
      cmake -G "MinGW Makefiles" -DUSE_SWIG=ON ..
      mingw32-make.exe -j4
 
-The jar file will be in ``LightGBM/build`` folder and the dll files will be in ``LightGBM/`` folder.
+The ``.jar`` file will be in ``LightGBM/build`` folder and the ``.dll`` files will be in ``LightGBM/`` folder.
 
 **Note**: You may need to run the ``cmake -G "MinGW Makefiles" -DUSE_SWIG=ON ..`` one more time if you encounter the ``sh.exe was found in your PATH`` error.
 
-It is recommended to use **VS Build Tools (Visual Studio)** for its better multithreading efficiency in **Windows** for many-core systems (see `FAQ <./FAQ.rst#lightgbm>`__ Question 4 and Question 8).
+It is recommended to use **VS Build Tools (Visual Studio)** for its better multithreading efficiency in **Windows** for many-core systems
+(see `Question 4 <./FAQ.rst#i-am-using-windows-should-i-use-visual-studio-or-mingw-for-compiling-lightgbm>`__ and `Question 8 <./FAQ.rst#cpu-usage-is-low-like-10-in-windows-when-using-lightgbm-on-very-large-datasets-with-many-core-systems>`__).
+
 
 Also, you may want to read `gcc Tips <./gcc-Tips.rst>`__.
 
@@ -640,19 +665,95 @@ On Linux Java wrapper of LightGBM can be built using **Java**, **SWIG**, **CMake
 
    .. code::
 
-     git clone --recursive https://github.com/Microsoft/LightGBM ; cd LightGBM
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
      mkdir build ; cd build
      cmake -DUSE_SWIG=ON ..
      make -j4
 
+macOS
+^^^^^
+
+On macOS Java wrapper of LightGBM can be built using **Java**, **SWIG**, **CMake** and **Apple Clang** or **gcc**.
+
+First, install `SWIG`_ and **Java** (also make sure that ``JAVA_HOME`` is set properly).
+Then, either follow the **Apple Clang** or **gcc** installation instructions below.
+
+Apple Clang
+***********
+
+Only **Apple Clang** version 8.1 or higher is supported.
+
+1. Install `CMake`_ (3.12 or higher):
+
+   .. code::
+
+     brew install cmake
+
+2. Install **OpenMP**:
+
+   .. code::
+
+     brew install libomp
+
+3. Run the following commands:
+
+   .. code::
+
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
+     mkdir build ; cd build
+
+     # For Mojave (10.14)
+     cmake \
+       -DUSE_SWIG=ON \
+       -DAPPLE_OUTPUT_DYLIB=ON \
+       -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" \
+       -DOpenMP_C_LIB_NAMES="omp" \
+       -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" \
+       -DOpenMP_CXX_LIB_NAMES="omp" \
+       -DOpenMP_omp_LIBRARY=$(brew --prefix libomp)/lib/libomp.dylib \
+       ..
+
+     # For High Sierra or earlier (<= 10.13)
+     cmake -DUSE_SWIG=ON -DAPPLE_OUTPUT_DYLIB=ON ..
+
+     make -j4
+
+gcc
+***
+
+1. Install `CMake`_ (3.2 or higher):
+
+   .. code::
+
+     brew install cmake
+
+2. Install **gcc**:
+
+   .. code::
+
+     brew install gcc
+
+3. Run the following commands:
+
+   .. code::
+
+     git clone --recursive https://github.com/microsoft/LightGBM ; cd LightGBM
+     export CXX=g++-7 CC=gcc-7  # replace "7" with version of gcc installed on your machine
+     mkdir build ; cd build
+     cmake -DUSE_SWIG=ON -DAPPLE_OUTPUT_DYLIB=ON ..
+     make -j4
+
+Also, you may want to read `gcc Tips <./gcc-Tips.rst>`__.
+
+
 .. |download artifacts| image:: ./_static/images/artifacts-not-available.svg
    :target: https://lightgbm.readthedocs.io/en/latest/Installation-Guide.html
 
-.. _Python-package: https://github.com/Microsoft/LightGBM/tree/master/python-package
+.. _Python-package: https://github.com/microsoft/LightGBM/tree/master/python-package
 
-.. _R-package: https://github.com/Microsoft/LightGBM/tree/master/R-package
+.. _R-package: https://github.com/microsoft/LightGBM/tree/master/R-package
 
-.. _zip archive: https://github.com/Microsoft/LightGBM/archive/master.zip
+.. _zip archive: https://github.com/microsoft/LightGBM/archive/master.zip
 
 .. _Visual Studio: https://visualstudio.microsoft.com/downloads/
 

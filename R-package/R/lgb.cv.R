@@ -4,7 +4,7 @@ CVBooster <- R6::R6Class(
   cloneable = FALSE,
   public = list(
     best_iter = -1,
-    best_score = -1,
+    best_score = NA,
     record_evals = list(),
     boosters = list(),
     initialize = function(x) {
@@ -305,6 +305,17 @@ lgb.cv <- function(params = list(),
     if (env$met_early_stop) break
 
   }
+
+  if (record && is.na(env$best_score)) {
+    if (env$eval_list[[1]]$higher_better[1] == TRUE) {
+      cv_booster$best_iter <- unname(which.max(unlist(cv_booster$record_evals[[2]][[1]][[1]])))
+      cv_booster$best_score <- cv_booster$record_evals[[2]][[1]][[1]][[cv_booster$best_iter]]
+    } else {
+      cv_booster$best_iter <- unname(which.min(unlist(cv_booster$record_evals[[2]][[1]][[1]])))
+      cv_booster$best_score <- cv_booster$record_evals[[2]][[1]][[1]][[cv_booster$best_iter]]
+    }
+  }
+
   if (reset_data) {
     lapply(cv_booster$boosters, function(fd) {
       # Store temporarily model data elsewhere
@@ -318,6 +329,7 @@ lgb.cv <- function(params = list(),
       fd$booster$record_evals <- booster_old$record_evals
     })
   }
+
   # Return booster
   return(cv_booster)
 

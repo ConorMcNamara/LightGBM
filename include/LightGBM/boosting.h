@@ -1,12 +1,17 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_BOOSTING_H_
 #define LIGHTGBM_BOOSTING_H_
 
-#include <LightGBM/meta.h>
 #include <LightGBM/config.h>
+#include <LightGBM/meta.h>
 
-#include <vector>
 #include <string>
 #include <map>
+#include <unordered_map>
+#include <vector>
 
 namespace LightGBM {
 
@@ -20,7 +25,7 @@ struct PredictionEarlyStopInstance;
 * \brief The interface for Boosting
 */
 class LIGHTGBM_EXPORT Boosting {
-public:
+ public:
   /*! \brief virtual destructor */
   virtual ~Boosting() {}
 
@@ -291,11 +296,10 @@ public:
   * \return The boosting object
   */
   static Boosting* CreateBoosting(const std::string& type, const char* filename);
-
 };
 
 class GBDTBase : public Boosting {
-public:
+ public:
   virtual double GetLeafValue(int tree_idx, int leaf_idx) const = 0;
   virtual void SetLeafValue(int tree_idx, int leaf_idx, double val) = 0;
 };

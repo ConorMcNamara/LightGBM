@@ -1,11 +1,15 @@
+/*!
+ * Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #ifndef LIGHTGBM_APPLICATION_H_
 #define LIGHTGBM_APPLICATION_H_
 
-#include <LightGBM/meta.h>
 #include <LightGBM/config.h>
+#include <LightGBM/meta.h>
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace LightGBM {
 
@@ -23,7 +27,7 @@ class Metric;
 *        and save the score to disk.
 */
 class Application {
-public:
+ public:
   Application(int argc, char** argv);
 
   /*! \brief Destructor */
@@ -32,8 +36,7 @@ public:
   /*! \brief To call this funciton to run application*/
   inline void Run();
 
-private:
-
+ private:
   /*! \brief Load parameters from command line and config file*/
   void LoadParameters(int argc, char** argv);
 

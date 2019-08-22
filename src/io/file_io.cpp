@@ -1,14 +1,20 @@
+/*!
+ * Copyright (c) 2018 Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for license information.
+ */
 #include <LightGBM/utils/file_io.h>
+
 #include <LightGBM/utils/log.h>
 
 #include <algorithm>
 #include <sstream>
 #include <unordered_map>
+
 #ifdef USE_HDFS
 #include <hdfs.h>
 #endif
 
-namespace LightGBM{
+namespace LightGBM {
 
 struct LocalFile : VirtualFileReader, VirtualFileWriter {
   LocalFile(const std::string& filename, const std::string& mode) : filename_(filename), mode_(mode) {}
@@ -42,7 +48,7 @@ struct LocalFile : VirtualFileReader, VirtualFileWriter {
     return fwrite(buffer, bytes, 1, file_) == 1 ? bytes : 0;
   }
 
-private:
+ private:
   FILE* file_ = NULL;
   const std::string filename_;
   const std::string mode_;
@@ -86,13 +92,13 @@ struct HDFSFile : VirtualFileReader, VirtualFileWriter {
     return FileOperation<const void*>(data, bytes, &hdfsWrite);
   }
 
-private:
+ private:
   template <typename BufferType>
   using fileOp = tSize(*)(hdfsFS, hdfsFile, BufferType, tSize);
 
   template <typename BufferType>
   inline size_t FileOperation(BufferType data, size_t bytes, fileOp<BufferType> op) const {
-    char* buffer = (char *)data;
+    char* buffer = const_cast<char*>(static_cast<const char*>(data));
     size_t remain = bytes;
     while (remain != 0) {
       size_t nmax = static_cast<size_t>(std::numeric_limits<tSize>::max());
@@ -148,7 +154,7 @@ std::unordered_map<std::string, hdfsFS> HDFSFile::fs_cache_ = std::unordered_map
 #define WITH_HDFS(x) x
 #else
 #define WITH_HDFS(x) Log::Fatal("HDFS support is not enabled")
-#endif // USE_HDFS
+#endif  // USE_HDFS
 
 std::unique_ptr<VirtualFileReader> VirtualFileReader::Make(const std::string& filename) {
   if (0 == filename.find(kHdfsProto)) {
